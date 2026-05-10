@@ -17,7 +17,6 @@
                 <a href="tresorerie.html" class="nav-item">Trésorerie</a>
             </nav>
             <div class="sidebar-footer" style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto;">
-                <div class="period" style="font-size: 11px; color: #94a3b8; text-align: center;">Période 2024-2025</div>
                 <button class="btn btn-secondary" id="resetButton" style="width:100%; margin-top:12px; border-color:#dc2626; color:#dc2626; background:transparent;">Réinitialiser toutes les données</button>
             </div>
         </aside>
@@ -122,6 +121,7 @@
         }
         function filterTableNora() { const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || ''; const statutFilter = document.getElementById('statutFilter')?.value || 'all'; const rows = document.querySelectorAll('#facturesTableBody tr'); rows.forEach(row => { let show = true; const client = row.cells[0]?.innerText.toLowerCase() || ''; if (searchTerm && !client.includes(searchTerm)) show = false; const statut = row.cells[7]?.innerText.toLowerCase() || ''; if (statutFilter !== 'all' && !statut.includes(statutFilter)) show = false; row.style.display = show ? '' : 'none'; }); }
         document.addEventListener('DOMContentLoaded', function() { refreshNoraMargins(); afficherCoutsHistorique(); document.getElementById('searchInput').addEventListener('input', filterTableNora); document.getElementById('statutFilter').addEventListener('change', filterTableNora); });
+        window.__reloadPage = refreshNoraMargins;
         window.refreshNoraMargins = refreshNoraMargins;
     </script>
 </body>
