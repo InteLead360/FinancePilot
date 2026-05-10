@@ -17,7 +17,6 @@
                 <a href="tresorerie.html" class="nav-item">Trésorerie</a>
             </nav>
             <div class="sidebar-footer" style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto;">
-                <div class="period" style="font-size: 11px; color: #94a3b8; text-align: center;">Période 2024-2025</div>
                 <button class="btn btn-secondary" id="resetButton" style="width:100%; margin-top:12px; border-color:#dc2626; color:#dc2626; background:transparent;">Réinitialiser toutes les données</button>
             </div>
         </aside>
@@ -166,7 +165,7 @@
             `).join('');
         }
         
-        document.addEventListener('DOMContentLoaded', loadRegulPage);
+        window.__reloadPage = loadRegulPage;
         window.loadRegulPage = loadRegulPage;
     </script>
 </body>
