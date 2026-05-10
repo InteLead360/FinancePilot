@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Intelead Finance - NORA</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header"><div class="logo"><h2>FinancePilot 360</h2><p>by Intelead SARL</p></div></div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-item">Tableau de bord</a>
+                <a href="regul.html" class="nav-item">Régularisation</a>
+                <a href="salesx.html" class="nav-item">SalesX</a>
+                <a href="nora.html" class="nav-item active">NORA</a>
+                <a href="tresorerie.html" class="nav-item">Trésorerie</a>
+            </nav>
+            <div class="sidebar-footer" style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto;">
+                <div class="period" style="font-size: 11px; color: #94a3b8; text-align: center;">Période 2024-2025</div>
+                <button class="btn btn-secondary" id="resetButton" style="width:100%; margin-top:12px; border-color:#dc2626; color:#dc2626; background:transparent;">Réinitialiser toutes les données</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header"><h1>NORA Académie</h1><p>Factures, participants et rentabilité</p></div>
+            <div class="kpi-grid" id="kpiGrid"></div>
+
+            <div class="filters-bar">
+                <div class="filters-left">
+                    <div class="filter-group"><label>Recherche</label><input type="text" id="searchInput" class="search-input" placeholder="Client..."></div>
+                    <div class="filter-group"><label>Statut</label><select id="statutFilter" class="filter-select"><option value="all">Tous</option><option value="payé">Payé</option><option value="impayé">Impayé</option><option value="partiel">Partiel</option></select></div>
+                    <div class="filter-group"><label>Ventilation</label><select id="costAllocationMethod" class="filter-select" onchange="refreshNoraMargins()"><option value="byCa">Par CA</option><option value="bySession">Par session</option><option value="byParticipant">Par participant</option></select></div>
+                </div>
+                <div>
+                    <button class="btn btn-primary" onclick="openModal('addModal')">Ajouter facture</button>
+                    <button class="btn btn-secondary" onclick="openParticipantsModal()">Gérer participants</button>
+                    <button class="btn btn-secondary" onclick="openCoutsHistoriqueModal()">Anciens coûts</button>
+                    <button class="btn btn-secondary" onclick="exportModuleCSV('nora')">Exporter CSV</button>
+                    <button class="btn btn-secondary" onclick="exportAllToJSON()">Exporter JSON</button>
+                    <input type="file" id="importFile" style="display:none" accept=".csv,.json" onchange="importFromFile(this.files[0], 'nora')">
+                    <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">Importer</button>
+                </div>
+            </div>
+
+            <div class="data-card">
+                <div class="card-title">Factures B2B <span class="entity-badge entity-nora">NORA</span></div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead><tr><th>Client</th><th>Secteur</th><th>CA HT</th><th>Encaissé</th><th>Reste</th><th>Participants</th><th>Marge %</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead>
+                        <tbody id="facturesTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="data-card"><div class="card-title">Coûts historiques (avant juin 2025)</div><div id="coutsHistoriqueList" class="table-wrapper"><p>Aucun coût historique renseigné.</p></div></div>
+        </main>
+    </div>
+
+    <div id="addModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Ajouter une facture</h3><button class="modal-close" onclick="closeModal('addModal')">&times;</button></div>
+        <div class="modal-body"><div class="form-group"><label>Client</label><input type="text" id="newClient"></div><div class="form-group"><label>CA HT (MAD)</label><input type="number" id="newCa"></div></div>
+        <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addModal')">Annuler</button><button class="btn btn-primary" onclick="addFacture()">Ajouter</button></div></div></div>
+
+    <div id="editModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Modifier la facture</h3><button class="modal-close" onclick="closeModal('editModal')">&times;</button></div>
+        <div class="modal-body"><div class="form-group"><label>Client</label><input type="text" id="editClient"></div><div class="form-group"><label>Secteur</label><select id="editSecteur"><option>Industrie</option><option>Télécom</option><option>Enseignement</option><option>Conseil</option><option>Autre</option></select></div>
+        <div class="form-group"><label>CA HT (MAD)</label><input type="number" id="editCaHt"></div><div class="form-group"><label>Encaissé (MAD)</label><input type="number" id="editEncaisse"></div></div>
+        <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('editModal')">Annuler</button><button class="btn btn-primary" onclick="saveEdit()">Enregistrer</button></div></div></div>
+
+    <div id="participantsModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Gérer les participants</h3><button class="modal-close" onclick="closeModal('participantsModal')">&times;</button></div>
+        <div class="modal-body"><div class="form-group"><label>Facture</label><select id="participantFactureSelect"></select></div>
+        <div class="form-group"><label>Nombre de participants</label><input type="number" id="participantCount" value="0"></div>
+        <div class="form-group"><label>Observations</label><input type="text" id="participantNote" placeholder="Format, lieu, remarques..."></div></div>
+        <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('participantsModal')">Annuler</button><button class="btn btn-primary" onclick="saveParticipants()">Enregistrer</button></div></div></div>
+
+    <div id="coutsHistoriqueModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Ajouter un coût historique</h3><button class="modal-close" onclick="closeModal('coutsHistoriqueModal')">&times;</button></div>
+        <div class="modal-body"><div class="form-group"><label>Catégorie</label><input type="text" id="newCoutCategorie" placeholder="Ex: Formateur, Salle, Transport..."></div>
+        <div class="form-group"><label>Montant (MAD)</label><input type="number" id="newCoutMontant" value="0"></div>
+        <div class="form-group"><label>Période / session concernée</label><input type="text" id="newCoutPeriode" placeholder="Ex: Formation NORA-B2B-003, mars 2025"></div>
+        <div class="form-group"><label>Justificatif</label><input type="text" id="newCoutJustificatif" placeholder="Réf facture / note de frais"></div></div>
+        <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('coutsHistoriqueModal')">Annuler</button><button class="btn btn-primary" onclick="ajouterCoutHistorique()">Ajouter</button></div></div></div>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+    <script>
+        function reinitialiserDonnees() {
+            const firstConfirm = confirm("⚠️ Attention : Cette action va effacer TOUTES vos modifications.\n\nCliquez sur OK pour continuer.");
+            if (!firstConfirm) return;
+            const secondConfirm = prompt("CONFIRMATION : Tapez 'CONFIRMER' pour valider :");
+            if (secondConfirm !== "CONFIRMER") { alert("Réinitialisation annulée."); return; }
+            localStorage.removeItem('financepilot360_data'); localStorage.removeItem('noraParticipants'); localStorage.removeItem('salesxExpenses'); localStorage.removeItem('noraCoutsHistorique');
+            alert("✅ Données réinitialisées."); location.reload();
+        }
+        
+        document.getElementById('resetButton').onclick = reinitialiserDonnees;
+        
+        function openParticipantsModal() { const select = document.getElementById('participantFactureSelect'); select.innerHTML = APP_DATA.noraFactures.map(f => `<option value="${f.id}">${f.client} - ${f.date} (${f.caHt} MAD)</option>`).join(''); openModal('participantsModal'); }
+        function saveParticipants() { const factureId = parseInt(document.getElementById('participantFactureSelect').value); const nbParticipants = parseInt(document.getElementById('participantCount').value); const note = document.getElementById('participantNote').value; if (!APP_DATA.noraParticipants) APP_DATA.noraParticipants = {}; APP_DATA.noraParticipants[factureId] = { nbParticipants: nbParticipants, note: note }; localStorage.setItem('noraParticipants', JSON.stringify(APP_DATA.noraParticipants)); closeModal('participantsModal'); refreshNoraMargins(); showNotification("Participants enregistrés"); }
+        function openCoutsHistoriqueModal() { openModal('coutsHistoriqueModal'); }
+        function ajouterCoutHistorique() { const categorie = document.getElementById('newCoutCategorie').value; const montant = parseFloat(document.getElementById('newCoutMontant').value); const periode = document.getElementById('newCoutPeriode').value; const justificatif = document.getElementById('newCoutJustificatif').value; if (!categorie || !montant) { showNotification("Veuillez remplir la catégorie et le montant", "error"); return; } if (!APP_DATA.noraCoutsHistorique) APP_DATA.noraCoutsHistorique = []; APP_DATA.noraCoutsHistorique.push({ id: Date.now(), categorie: categorie, montant: montant, periode: periode, justificatif: justificatif, dateAjout: new Date().toISOString() }); localStorage.setItem('noraCoutsHistorique', JSON.stringify(APP_DATA.noraCoutsHistorique)); closeModal('coutsHistoriqueModal'); afficherCoutsHistorique(); refreshNoraMargins(); showNotification("Coût historique ajouté"); }
+        function afficherCoutsHistorique() { const container = document.getElementById('coutsHistoriqueList'); if (!APP_DATA.noraCoutsHistorique || APP_DATA.noraCoutsHistorique.length === 0) { container.innerHTML = '<p>Aucun coût historique renseigné.</p>'; return; } let html = '<table class="data-table"><thead><tr><th>Catégorie</th><th>Montant</th><th>Période</th><th>Justificatif</th><th>Actions</th></tr></thead><tbody>'; APP_DATA.noraCoutsHistorique.forEach(c => { html += `<tr><td>${c.categorie}</td><td>${c.montant.toLocaleString()} MAD</td><td>${c.periode || '-'}</td><td>${c.justificatif || '-'}</td><td><button class="btn-delete" onclick="supprimerCoutHistorique(${c.id})">Supprimer</button></td></tr>`; }); html += '</tbody></table>'; container.innerHTML = html; }
+        function supprimerCoutHistorique(id) { if(confirm("Supprimer ce coût ?")) { APP_DATA.noraCoutsHistorique = APP_DATA.noraCoutsHistorique.filter(c => c.id !== id); localStorage.setItem('noraCoutsHistorique', JSON.stringify(APP_DATA.noraCoutsHistorique)); afficherCoutsHistorique(); refreshNoraMargins(); showNotification("Coût supprimé"); } }
+        function refreshNoraMargins() {
+            const method = document.getElementById('costAllocationMethod').value;
+            let totalCouts = 65330;
+            if (APP_DATA.noraCoutsHistorique && APP_DATA.noraCoutsHistorique.length > 0) totalCouts += APP_DATA.noraCoutsHistorique.reduce((s,c) => s + c.montant, 0);
+            const totalCa = APP_DATA.noraFactures.reduce((s,i) => s + i.caHt, 0);
+            const totalSessions = APP_DATA.noraFactures.reduce((s,i) => s + (i.nbSessions || 1), 0);
+            const totalParticipants = Object.values(APP_DATA.noraParticipants || {}).reduce((s,p) => s + (p.nbParticipants || 0), 0);
+            const facturesWithMargin = APP_DATA.noraFactures.map(f => {
+                let allocatedCost = 0;
+                if (method === 'byCa') allocatedCost = totalCouts * (f.caHt / totalCa);
+                else if (method === 'bySession') allocatedCost = totalCouts * ((f.nbSessions || 1) / totalSessions);
+                else if (method === 'byParticipant') { const participantCount = (APP_DATA.noraParticipants?.[f.id]?.nbParticipants || 0); allocatedCost = totalParticipants > 0 ? totalCouts * (participantCount / totalParticipants) : 0; }
+                const margeCalculee = f.caHt - allocatedCost; const tauxMarge = (margeCalculee / f.caHt * 100).toFixed(1);
+                const participants = APP_DATA.noraParticipants?.[f.id]?.nbParticipants || '-';
+                return { ...f, tauxMarge: tauxMarge, participants: participants, margeCalculee: margeCalculee };
+            });
+            const caTotal = APP_DATA.noraFactures.reduce((s,i) => s + i.caHt, 0);
+            const encaisseTotal = APP_DATA.noraFactures.reduce((s,i) => s + i.encaisse, 0);
+            document.getElementById('kpiGrid').innerHTML = `<div class="kpi-card"><div class="kpi-value">${caTotal.toLocaleString()} MAD</div><div class="kpi-label">CA total HT</div></div><div class="kpi-card"><div class="kpi-value">${encaisseTotal.toLocaleString()} MAD</div><div class="kpi-label">Encaissé</div><div class="kpi-trend">${((encaisseTotal/caTotal)*100).toFixed(0)}%</div></div><div class="kpi-card"><div class="kpi-value" style="color:#dc2626">${(caTotal-encaisseTotal).toLocaleString()} MAD</div><div class="kpi-label">Reste à encaisser</div></div>`;
+            document.getElementById('facturesTableBody').innerHTML = facturesWithMargin.map(f => `<tr><td>${f.client}</td><td>${f.secteur}</td><td>${f.caHt.toLocaleString()} MAD</td><td>${f.encaisse.toLocaleString()} MAD</td><td>${(f.caHt - f.encaisse).toLocaleString()} MAD</td><td>${f.participants !== '-' ? `<span class="participants-badge">${f.participants} pers.</span>` : '-'}</td><td class="${f.tauxMarge >= 0 ? 'trend-up' : 'trend-down'}">${f.tauxMarge}%</td><td><span class="badge ${f.statut === 'payé' ? 'badge-paid' : (f.statut === 'partiel' ? 'badge-partial' : 'badge-unpaid')}">${f.statut === 'payé' ? 'PAYÉ' : (f.statut === 'partiel' ? 'PARTIEL' : 'IMPAYÉ')}</span></td><td>${f.date}</td><td class="actions-cell"><button class="btn-edit" onclick='openModal("editModal", ${JSON.stringify(f).replace(/'/g, "&#39;")}, "facture")'>Modifier</button><button class="btn-delete" onclick="deleteItem(${f.id}, 'facture')">Supprimer</button></td></tr>`).join('');
+        }
+        function filterTableNora() { const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || ''; const statutFilter = document.getElementById('statutFilter')?.value || 'all'; const rows = document.querySelectorAll('#facturesTableBody tr'); rows.forEach(row => { let show = true; const client = row.cells[0]?.innerText.toLowerCase() || ''; if (searchTerm && !client.includes(searchTerm)) show = false; const statut = row.cells[7]?.innerText.toLowerCase() || ''; if (statutFilter !== 'all' && !statut.includes(statutFilter)) show = false; row.style.display = show ? '' : 'none'; }); }
+        document.addEventListener('DOMContentLoaded', function() { refreshNoraMargins(); afficherCoutsHistorique(); document.getElementById('searchInput').addEventListener('input', filterTableNora); document.getElementById('statutFilter').addEventListener('change', filterTableNora); });
+        window.refreshNoraMargins = refreshNoraMargins;
+    </script>
+</body>
+</html>

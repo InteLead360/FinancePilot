@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Intelead Finance - Régularisation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header"><div class="logo"><h2>FinancePilot 360</h2><p>by Intelead SARL</p></div></div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-item">Tableau de bord</a>
+                <a href="regul.html" class="nav-item active">Régularisation</a>
+                <a href="salesx.html" class="nav-item">SalesX</a>
+                <a href="nora.html" class="nav-item">NORA</a>
+                <a href="tresorerie.html" class="nav-item">Trésorerie</a>
+            </nav>
+            <div class="sidebar-footer" style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto;">
+                <div class="period" style="font-size: 11px; color: #94a3b8; text-align: center;">Période 2024-2025</div>
+                <button class="btn btn-secondary" id="resetButton" style="width:100%; margin-top:12px; border-color:#dc2626; color:#dc2626; background:transparent;">Réinitialiser toutes les données</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header"><h1>Régularisation fiscale et sociale</h1><p>Obligations 2024-2025</p></div>
+            <div class="kpi-grid" id="kpiGrid"></div>
+
+            <div class="filters-bar">
+                <div class="filters-left">
+                    <div class="filter-group"><label>Recherche</label><input type="text" id="searchInput" class="search-input" placeholder="Obligation, entité..."></div>
+                    <div class="filter-group"><label>Risque</label><select id="riskFilter" class="filter-select"><option value="all">Tous</option><option value="critique">Critique</option><option value="eleve">Élevé</option><option value="moyen">Moyen</option></select></div>
+                </div>
+                <div>
+                    <button class="btn btn-primary" onclick="openModal('addModal')">Ajouter</button>
+                    <button class="btn btn-secondary" onclick="exportModuleCSV('obligation')">Exporter CSV</button>
+                    <button class="btn btn-secondary" onclick="exportAllToJSON()">Exporter JSON</button>
+                    <input type="file" id="importFile" style="display:none" accept=".csv,.json" onchange="importFromFile(this.files[0], 'obligation')">
+                    <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">Importer</button>
+                </div>
+            </div>
+
+            <div class="data-card">
+                <div class="card-title">Liste des obligations <span class="entity-badge entity-intelead">Intelead</span> <span class="entity-badge entity-salesflow">SalesFlow</span></div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Obligation</th>
+                                <th>Entité</th>
+                                <th>Type</th>
+                                <th>Statut</th>
+                                <th>Échéance</th>
+                                <th>Risque</th>
+                                <th>Horizon</th>
+                                <th>Pièces manquantes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Ajout -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Ajouter une obligation</h3><button class="modal-close" onclick="closeModal('addModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>Obligation</label><input type="text" id="newObligation"></div>
+                <div class="form-group"><label>Entité</label><select id="newEntite"><option>SalesFlow SARL AU</option><option>Intelead SARL</option><option>Groupé</option></select></div>
+                <div class="form-group"><label>Type</label><select id="newType"><option>Bilan comptable</option><option>Déclaration fiscale</option><option>Cotisations sociales</option></select></div>
+                <div class="form-group"><label>Risque</label><select id="newRisque"><option value="critical">Critique</option><option value="high">Élevé</option><option value="medium">Moyen</option></select></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addModal')">Annuler</button><button class="btn btn-primary" onclick="addObligation()">Ajouter</button></div>
+        </div>
+    </div>
+
+    <!-- Modal Edition -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Modifier l'obligation</h3><button class="modal-close" onclick="closeModal('editModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>Obligation</label><input type="text" id="editObligation"></div>
+                <div class="form-group"><label>Entité</label><select id="editEntite"><option>SalesFlow SARL AU</option><option>Intelead SARL</option><option>Groupé</option></select></div>
+                <div class="form-group"><label>Type</label><select id="editType"><option>Bilan comptable</option><option>Déclaration fiscale</option><option>Cotisations sociales</option></select></div>
+                <div class="form-group"><label>Statut</label><select id="editStatut"><option>Non déclaré</option><option>En cours</option><option>Déclaré</option></select></div>
+                <div class="form-group"><label>Risque</label><select id="editRisque"><option value="critical">Critique</option><option value="high">Élevé</option><option value="medium">Moyen</option></select></div>
+                <div class="form-group"><label>Pièces manquantes</label><textarea id="editPieces" rows="2"></textarea></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('editModal')">Annuler</button><button class="btn btn-primary" onclick="saveEdit()">Enregistrer</button></div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Fonction de réinitialisation avec DOUBLE CONFIRMATION
+        function reinitialiserDonnees() {
+            const firstConfirm = confirm("⚠️ ATTENTION : Cette action va effacer TOUTES les données que vous avez ajoutées ou modifiées (obligations, factures, budgets, trésorerie).\n\nCliquez sur OK pour continuer ou Annuler.");
+            if (!firstConfirm) return;
+            
+            const secondConfirm = prompt("CONFIRMATION SUPPLEMENTAIRE\n\nVeuillez taper 'CONFIRMER' (en majuscules) pour valider la réinitialisation totale des données :");
+            if (secondConfirm !== "CONFIRMER") {
+                alert("Réinitialisation annulée. Le texte saisi n'est pas correct.");
+                return;
+            }
+            
+            localStorage.removeItem('financepilot360_data');
+            localStorage.removeItem('noraParticipants');
+            localStorage.removeItem('salesxExpenses');
+            localStorage.removeItem('noraCoutsHistorique');
+            
+            alert("✅ Toutes les données ont été réinitialisées. La page va se recharger.");
+            location.reload();
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const resetBtn = document.getElementById('resetButton');
+            if (resetBtn) resetBtn.onclick = reinitialiserDonnees;
+            filterTableRegul();
+        });
+        
+        function filterTableRegul() {
+            const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
+            const riskFilter = document.getElementById('riskFilter')?.value || 'all';
+            const rows = document.querySelectorAll('#tableBody tr');
+            rows.forEach(row => {
+                let show = true;
+                const text = row.innerText.toLowerCase();
+                if (searchTerm && !text.includes(searchTerm)) show = false;
+                if (riskFilter !== 'all') {
+                    const badge = row.querySelector('.badge');
+                    if (badge && !badge.innerText.toLowerCase().includes(riskFilter)) show = false;
+                }
+                row.style.display = show ? '' : 'none';
+            });
+        }
+        
+        if (document.getElementById('searchInput')) document.getElementById('searchInput').addEventListener('input', filterTableRegul);
+        if (document.getElementById('riskFilter')) document.getElementById('riskFilter').addEventListener('change', filterTableRegul);
+        
+        function loadRegulPage() {
+            document.getElementById('kpiGrid').innerHTML = `
+                <div class="kpi-card"><div class="kpi-value">${APP_DATA.obligations.length}</div><div class="kpi-label">Total obligations</div></div>
+                <div class="kpi-card"><div class="kpi-value" style="color:#dc2626">${APP_DATA.obligations.filter(o => o.risque === 'critical').length}</div><div class="kpi-label">Risque critique</div></div>
+                <div class="kpi-card"><div class="kpi-value">${APP_DATA.obligations.filter(o => o.horizon === '30j').length}</div><div class="kpi-label">Échéance 30 jours</div></div>
+            `;
+            document.getElementById('tableBody').innerHTML = APP_DATA.obligations.map(o => `
+                <tr>
+                    <td>${o.obligation}</td>
+                    <td>${o.entite}</td>
+                    <td>${o.type}</td>
+                    <td>${o.statut}</td>
+                    <td>${o.echeance}</td>
+                    <td><span class="badge badge-${o.risque === 'critical' ? 'critical' : (o.risque === 'high' ? 'high' : 'medium')}">${o.risque === 'critical' ? 'CRITIQUE' : (o.risque === 'high' ? 'ÉLEVÉ' : 'MOYEN')}</span></td>
+                    <td>${o.horizon}</td>
+                    <td>${o.pieces || '-'}</td>
+                    <td class="actions-cell">
+                        <button class="btn-edit" onclick='openModal("editModal", ${JSON.stringify(o).replace(/'/g, "&#39;")}, "obligation")'>Modifier</button>
+                        <button class="btn-delete" onclick="deleteItem(${o.id}, 'obligation')">Supprimer</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        document.addEventListener('DOMContentLoaded', loadRegulPage);
+        window.loadRegulPage = loadRegulPage;
+    </script>
+</body>
+</html>

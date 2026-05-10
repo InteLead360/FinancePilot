@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Intelead Finance - SalesX</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header"><div class="logo"><h2>FinancePilot 360</h2><p>by Intelead SARL</p></div></div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-item">Tableau de bord</a>
+                <a href="regul.html" class="nav-item">Régularisation</a>
+                <a href="salesx.html" class="nav-item active">SalesX</a>
+                <a href="nora.html" class="nav-item">NORA</a>
+                <a href="tresorerie.html" class="nav-item">Trésorerie</a>
+            </nav>
+            <div class="sidebar-footer" style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto;">
+                <div class="period" style="font-size: 11px; color: #94a3b8; text-align: center;">Période 2024-2025</div>
+                <button class="btn btn-secondary" id="resetButton" style="width:100%; margin-top:12px; border-color:#dc2626; color:#dc2626; background:transparent;">Réinitialiser toutes les données</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header"><h1>SalesX - R&D et Subvention</h1><p>Suivi budgétaire</p></div>
+            <div class="kpi-grid" id="kpiGrid"></div>
+            <div id="hypothesesPanel"></div>
+
+            <div class="filters-bar">
+                <div class="filters-left"><div class="filter-group"><label>Recherche</label><input type="text" id="searchInput" class="search-input" placeholder="Poste..."></div></div>
+                <div><button class="btn btn-primary" onclick="openModal('addModal')">Ajouter</button><button class="btn btn-secondary" onclick="exportModuleCSV('salesx')">Exporter CSV</button>
+                <input type="file" id="importFile" style="display:none" accept=".csv,.json" onchange="importFromFile(this.files[0], 'salesx')"><button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">Importer</button></div>
+            </div>
+
+            <div class="data-card"><div class="card-title">Budget par poste <span class="entity-badge entity-salesflow">SalesFlow</span></div>
+                <div class="table-wrapper"><table class="data-table"><thead><tr><th>Catégorie</th><th>Poste</th><th>Budget</th><th>Réalisé</th><th>Conso</th><th>Justificatif</th><th>Actions</th></tr></thead><tbody id="budgetTableBody"></tbody></table></div>
+            </div>
+
+            <div class="data-card"><div class="card-title">Scénarios de rentabilité</div><div id="scenariosGrid"></div></div>
+            <div class="alert alert-info">Pricing contradictoire: 5000 - 54000 MAD/an - À clarifier</div>
+        </main>
+    </div>
+
+    <div id="addModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Ajouter un poste budgétaire</h3><button class="modal-close" onclick="closeModal('addModal')">&times;</button></div>
+        <div class="modal-body"><div class="form-group"><label>Poste</label><input type="text" id="newPoste"></div><div class="form-group"><label>Budget (MAD)</label><input type="number" id="newBudget"></div></div>
+        <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addModal')">Annuler</button><button class="btn btn-primary" onclick="addBudget()">Ajouter</button></div></div></div>
+
+    <div id="editModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Modifier le poste budgétaire</h3><button class="modal-close" onclick="closeModal('editModal')">&times;</button></div>
+        <div class="modal-body"><div class="form-group"><label>Poste</label><input type="text" id="editPoste"></div><div class="form-group"><label>Budget (MAD)</label><input type="number" id="editBudget"></div><div class="form-group"><label>Réalisé (MAD)</label><input type="number" id="editRealise"></div></div>
+        <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('editModal')">Annuler</button><button class="btn btn-primary" onclick="saveEdit()">Enregistrer</button></div></div></div>
+
+    <div id="expenseModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Renseigner la dépense réalisée</h3><button class="modal-close" onclick="closeModal('expenseModal')">&times;</button></div>
+        <div class="modal-body"><div class="form-group"><label>Poste</label><input type="text" id="expensePoste" readonly></div><div class="form-group"><label>Montant réalisé (MAD)</label><input type="number" id="expenseAmount" value="0"></div>
+        <div class="form-group"><label>Date de dépense</label><input type="date" id="expenseDate"></div><div class="form-group"><label>Justificatif</label><input type="text" id="expenseJustificatif" placeholder="Réf facture / note de frais"></div></div>
+        <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('expenseModal')">Annuler</button><button class="btn btn-primary" onclick="saveExpense()">Enregistrer</button></div></div></div>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+    <script>
+        let currentExpenseId = null;
+        
+        function reinitialiserDonnees() {
+            const firstConfirm = confirm("⚠️ Attention : Cette action va effacer TOUTES vos modifications.\n\nCliquez sur OK pour continuer.");
+            if (!firstConfirm) return;
+            const secondConfirm = prompt("CONFIRMATION : Tapez 'CONFIRMER' pour valider :");
+            if (secondConfirm !== "CONFIRMER") { alert("Réinitialisation annulée."); return; }
+            localStorage.removeItem('financepilot360_data'); localStorage.removeItem('noraParticipants'); localStorage.removeItem('salesxExpenses'); localStorage.removeItem('noraCoutsHistorique');
+            alert("✅ Données réinitialisées."); location.reload();
+        }
+        
+        document.getElementById('resetButton').onclick = reinitialiserDonnees;
+        
+        function openExpenseModal(id) { currentExpenseId = id; const item = APP_DATA.salesxBudget.find(b => b.id === id); document.getElementById('expensePoste').value = item.poste; document.getElementById('expenseAmount').value = item.realise || 0; document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0]; document.getElementById('expenseJustificatif').value = item.justificatif || ''; openModal('expenseModal'); }
+        function saveExpense() { const amount = parseFloat(document.getElementById('expenseAmount').value); const justificatif = document.getElementById('expenseJustificatif').value; const date = document.getElementById('expenseDate').value; const index = APP_DATA.salesxBudget.findIndex(b => b.id === currentExpenseId); if (index !== -1) { APP_DATA.salesxBudget[index].realise = amount; APP_DATA.salesxBudget[index].justificatif = justificatif; APP_DATA.salesxBudget[index].dateDepense = date; } updateKPIs(); loadSalesXPage(); closeModal('expenseModal'); showNotification("Dépense enregistrée"); }
+        function loadSalesXPage() { const totalBudget = APP_DATA.salesxBudget.reduce((s,i) => s + i.budget, 0); const totalRealise = APP_DATA.salesxBudget.reduce((s,i) => s + i.realise, 0); document.getElementById('kpiGrid').innerHTML = `<div class="kpi-card"><div class="kpi-value">${totalBudget.toLocaleString()} MAD</div><div class="kpi-label">Budget total</div></div><div class="kpi-card"><div class="kpi-value">${totalRealise.toLocaleString()} MAD</div><div class="kpi-label">Réalisé</div></div><div class="kpi-card"><div class="kpi-value">${APP_DATA.kpis.subventionSalesX.toLocaleString()} MAD</div><div class="kpi-label">Subvention</div></div>`; document.getElementById('budgetTableBody').innerHTML = APP_DATA.salesxBudget.map(b => `<tr><td>${b.categorie}</td><td>${b.poste}</td><td>${b.budget.toLocaleString()} MAD</td><td class="${b.realise === 0 ? 'trend-down' : ''}">${b.realise === 0 ? 'À renseigner' : b.realise.toLocaleString() + ' MAD'}</td><td>${((b.realise/b.budget)*100).toFixed(1)}%</td><td>${b.justificatif ? '<span class="badge badge-paid">✓</span>' : '<button class="btn-edit" onclick="openExpenseModal('+b.id+')">Ajouter</button>'}</td><td class="actions-cell"><button class="btn-edit" onclick='openModal("editModal", ${JSON.stringify(b).replace(/'/g, "&#39;")}, "budget")'>Modifier</button><button class="btn-delete" onclick="deleteItem(${b.id}, 'budget')">Supprimer</button></td></tr>`).join(''); updateScenarios(); }
+        document.addEventListener('DOMContentLoaded', loadSalesXPage);
+        window.loadSalesXPage = loadSalesXPage;
+    </script>
+</body>
+</html>
