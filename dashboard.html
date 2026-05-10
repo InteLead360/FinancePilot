@@ -57,7 +57,6 @@
                 <a href="tresorerie.html" class="nav-item">Trésorerie</a>
             </nav>
             <div class="sidebar-footer" style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto;">
-                <div class="period" style="font-size: 11px; color: #94a3b8; text-align: center;">Période 2024-2025</div>
                 <button class="btn btn-secondary" id="resetButton" style="width:100%; margin-top:12px; border-color:#dc2626; color:#dc2626; background:transparent;">Réinitialiser toutes les données</button>
             </div>
         </aside>
@@ -154,7 +153,22 @@
             if (trendChart) trendChart.destroy();
             trendChart = new Chart(ctxTrend, { type: 'line', data: { labels: last12.map(t => t.mois), datasets: [{ label: 'Encaissements', data: last12.map(t => t.encaissements), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.05)', fill: true, tension: 0.4, pointRadius: 3 }, { label: 'Dépenses', data: last12.map(t => t.depenses), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.05)', fill: true, tension: 0.4, pointRadius: 3 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top', labels: { font: { size: 10 } } } }, scales: { y: { ticks: { callback: (v) => (v/1000).toFixed(0) + 'k' } } } } });
         }
-        document.addEventListener('DOMContentLoaded', function() { refreshDashboard(); });
+        document.addEventListener('DOMContentLoaded', function() {
+            // Restore persisted data
+            try {
+                var saved = localStorage.getItem('financepilot360_data');
+                if (saved) {
+                    var d = JSON.parse(saved);
+                    if (d.obligations)         APP_DATA.obligations         = d.obligations;
+                    if (d.salesxBudget)        APP_DATA.salesxBudget        = d.salesxBudget;
+                    if (d.noraFactures)        APP_DATA.noraFactures        = d.noraFactures;
+                    if (d.hypotheses)          APP_DATA.hypotheses          = d.hypotheses;
+                    if (d.tresorerieMensuelle) APP_DATA.tresorerieMensuelle = d.tresorerieMensuelle;
+                    updateKPIs();
+                }
+            } catch(e) {}
+            refreshDashboard();
+        });
         window.refreshDashboard = refreshDashboard;
     </script>
 </body>
